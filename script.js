@@ -47,7 +47,7 @@ async function updateUsageCounter(action,elementId,increment=false){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),8000);
   try{
-    const response=await fetch(usageCounterBase+action+'/tutor-guia?readOnly='+(!increment),{signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',keepalive:increment});
+    const response=await fetch(usageCounterBase+action+'/tutor-guia'+(increment?'':'?readOnly=true'),{signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',keepalive:increment});
     if(!response.ok)throw new Error('Counter unavailable');
     const data=await response.json();
     if(!Number.isSafeInteger(data.value)||data.value<0)throw new Error('Invalid counter');
