@@ -34,3 +34,36 @@ $('buildFeedback').addEventListener('click',()=>{let a=$('advance').value.trim()
 $('copyFeedback').addEventListener('click',async()=>{let t=$('feedbackOutput').textContent;if(t.startsWith('A devolutiva')||t.startsWith('Preencha'))return;try{await navigator.clipboard.writeText(t);$('copyFeedback').textContent='Copiado';setTimeout(()=>$('copyFeedback').textContent='Copiar texto',1800)}catch{$('copyFeedback').textContent='Selecione o texto abaixo'}});
 $('buildTeacher').addEventListener('click',()=>{let s=$('teacherStrength').value.trim(),a=$('teacherAdjustment').value.trim(),f=$('teacherFollowup').value.trim();$('teacherOutput').textContent=(!s&&!a&&!f)?'Preencha uma potencialidade e um encaminhamento.':`Sua mediação favoreceu a aprendizagem quando ${s||'[descreva a prática observada]'}. Para qualificar o acompanhamento, recomendamos ${a||'[indique um ajuste específico]'}. Na próxima aplicação, proponha ${f||'[defina a retomada e a evidência esperada]'}. Registre a produção antes e depois do apoio para verificar o avanço.`;save()});
 $('copyTeacher').addEventListener('click',async()=>{let t=$('teacherOutput').textContent;if(t.startsWith('A devolutiva')||t.startsWith('Preencha'))return;try{await navigator.clipboard.writeText(t);$('copyTeacher').textContent='Copiado';setTimeout(()=>$('copyTeacher').textContent='Copiar texto',1800)}catch{$('copyTeacher').textContent='Selecione o texto abaixo'}});
+
+// Shared usage counters; rubric fields are never transmitted.
+const usagePanel=document.createElement('section');
+usagePanel.className='wrap section';
+usagePanel.setAttribute('aria-labelledby','usageTitle');
+usagePanel.innerHTML='<h2 id="usageTitle">Uso do guia</h2><div class="fields" aria-live="polite"><p><strong id="accessCount">Carregando…</strong><br>Acessos ao guia</p><p><strong id="printCount">Carregando…</strong><br>Aberturas da janela de impressão</p></div><p class="small">Contagem iniciada em 1º de outubro de 2026. Acessos representam carregamentos da página, não pessoas únicas. A impressão é registrada ao abrir a janela, mesmo quando cancelada. Os campos da rubrica não são enviados ao contador.</p>';
+document.querySelector('main').append(usagePanel);
+const usageCounterBase='https://counterapi.com/api/furukawaluzia-lt1.github.io/';
+async function updateUsageCounter(action,elementId,increment=false){
+  const element=document.getElementById(elementId);
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),8000);
+  try{
+    const response=await fetch(usageCounterBase+action+'/tutor-guia?readOnly='+(!increment),{signal:controller.signal,cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',keepalive:increment});
+    if(!response.ok)throw new Error('Counter unavailable');
+    const data=await response.json();
+    if(!Number.isSafeInteger(data.value)||data.value<0)throw new Error('Invalid counter');
+    element.textContent=data.value.toLocaleString('pt-BR');
+    element.removeAttribute('title');
+  }catch{
+    element.textContent='Indisponível';
+    element.title='Não foi possível consultar o contador. O guia e a impressão continuam disponíveis.';
+  }finally{clearTimeout(timeout)}
+}
+updateUsageCounter('view','accessCount',true);
+updateUsageCounter('print','printCount');
+let printCounterPending=false;
+window.addEventListener('beforeprint',()=>{
+  if(printCounterPending)return;
+  printCounterPending=true;
+  updateUsageCounter('print','printCount',true);
+});
+window.addEventListener('afterprint',()=>{printCounterPending=false});
